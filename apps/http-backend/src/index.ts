@@ -118,7 +118,7 @@ app.get("/chats/:roomId", async (req, res) => {
       orderBy: {
         id: "desc",
       },
-      take: 1000,
+      take: 50,
     });
 
     res.json({
@@ -141,7 +141,7 @@ app.get("/room/:slug", async (req, res) => {
   });
 
   res.json({
-    room,
+    id: room?.id,
   });
 });
 
