@@ -121,8 +121,10 @@ app.get("/chats/:roomId", async (req, res) => {
       take: 50,
     });
 
+    const reversedMessages = messages.reverse();
+
     res.json({
-      messages,
+      messages: reversedMessages,
     });
   } catch (e) {
     console.log(e);

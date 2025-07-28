@@ -18,6 +18,7 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "6.2.1",
+    "@types/node": "^24.1.0",
     "prisma": "^6.2.1"
   }
 }
