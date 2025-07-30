@@ -20,7 +20,7 @@ const variantClasses = {
   primary:
     " bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200",
   secondary:
-    " bg-white text-purple-600  rounded-lg font-semibold hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300",
+    " bg-white text-purple-700  rounded-lg font-semibold hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300",
   outline:
     "border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:text-purple-600 transform transition-all duration-300 flex items-center justify-center space-x-2",
 };
