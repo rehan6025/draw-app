@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
-    "@types/cors": "^2.8.17",
+    "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.7",
     "cors": "^2.8.5",
     "express": "^4.21.2",
