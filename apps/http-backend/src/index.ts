@@ -16,6 +16,7 @@ app.use(cors());
 
 app.post("/signup", async (req, res) => {
   const parsedData = CreateUserSchema.safeParse(req.body);
+  console.log("parsed data :: ", parsedData);
   if (!parsedData.success) {
     console.log(parsedData.error);
     res.json({
@@ -24,6 +25,16 @@ app.post("/signup", async (req, res) => {
     return;
   }
   try {
+    const checkUser = await prismaClient.user.findFirst({
+      where: {
+        email: parsedData.data.username,
+      },
+    });
+
+    if (checkUser) {
+      return res.status(409).json("invalid credentials");
+    }
+
     const user = await prismaClient.user.create({
       data: {
         email: parsedData.data?.username,
@@ -32,8 +43,16 @@ app.post("/signup", async (req, res) => {
         name: parsedData.data.name,
       },
     });
-    res.json({
-      userId: user.id,
+
+    const token = jwt.sign(
+      {
+        userId: user?.id,
+      },
+      JWT_SECRET
+    );
+
+    return res.status(200).json({
+      token,
     });
   } catch (e) {
     res.status(411).json({
