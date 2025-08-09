@@ -18,8 +18,7 @@ type Shape =
     }
   | {
       type: "pencil";
-      x: number;
-      y: number;
+      points: { x: number; y: number }[];
     }
   | null;
 
@@ -33,6 +32,12 @@ export class Game {
   private startX = 0;
   private startY = 0;
   private selectedTool: Tool = "circle";
+  private lastX: number = 0;
+  private lastY: number = 0;
+  private currentStroke: {
+    type: "pencil";
+    points: { x: number; y: number }[];
+  } | null = null;
 
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
@@ -81,6 +86,7 @@ export class Game {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = "black";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.lineWidth = 5;
 
     this.existingShapes.forEach((shape) => {
       this.ctx.strokeStyle = "rgba(255,255,255)";
@@ -97,8 +103,35 @@ export class Game {
         );
         this.ctx.stroke();
         this.ctx.closePath();
+      } else if (shape?.type === "pencil") {
+        if (shape.points.length > 1) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(shape.points[0].x, shape.points[0].y);
+          for (let i = 1; i < shape.points.length; i++) {
+            this.ctx.lineTo(shape.points[i].x, shape.points[i].y);
+          }
+
+          this.ctx.stroke();
+          this.ctx.closePath();
+        }
       }
     });
+
+    if (this.currentStroke && this.currentStroke.points.length > 1) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(
+        this.currentStroke.points[0].x,
+        this.currentStroke.points[0].y
+      );
+      for (let i = 1; i < this.currentStroke.points.length; i++) {
+        this.ctx.lineTo(
+          this.currentStroke.points[i].x,
+          this.currentStroke.points[i].y
+        );
+      }
+      this.ctx.stroke();
+      this.ctx.closePath();
+    }
   }
 
   mouseDownHandler(e: MouseEvent) {
@@ -106,6 +139,13 @@ export class Game {
     const rect = this.canvas.getBoundingClientRect();
     this.startX = e.clientX - rect.left;
     this.startY = e.clientY - rect.top;
+
+    if (this.selectedTool === "pencil") {
+      this.currentStroke = {
+        type: "pencil",
+        points: [{ x: e.offsetX, y: e.offsetY }],
+      };
+    }
   }
 
   mouseUpHandler(e: MouseEvent) {
@@ -132,6 +172,9 @@ export class Game {
         centerX: this.startX + radius,
         centerY: this.startY + radius,
       };
+    } else if (this.selectedTool === "pencil") {
+      shape = this.currentStroke;
+      this.currentStroke = null;
     }
 
     if (!shape) return;
@@ -168,6 +211,9 @@ export class Game {
       this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       this.ctx.stroke();
       this.ctx.closePath();
+    } else if (this.selectedTool === "pencil" && this.clicked) {
+      this.currentStroke?.points.push({ x: e.offsetX, y: e.offsetY });
+      this.clearCanvas();
     }
   }
 
