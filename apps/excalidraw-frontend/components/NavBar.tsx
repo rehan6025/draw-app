@@ -37,11 +37,7 @@ export function Navbar() {
             </Link>
 
             <Link href={"/signin"}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => console.log("Sign In")}
-              >
+              <Button variant="outline" size="sm">
                 Sign In
               </Button>
             </Link>
