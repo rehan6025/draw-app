@@ -1,5 +1,6 @@
 import { HTTP_BACKEND } from "@/config";
 import axios from "axios";
+import { Tool } from "@/components/Canvas";
 
 type Shape =
   | {

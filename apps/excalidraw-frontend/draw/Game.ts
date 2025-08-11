@@ -1,7 +1,6 @@
 import { styleText } from "util";
 import { getExistingShapes } from "./http";
-
-type Tool = "circle" | "rect" | "pencil";
+import { Tool } from "@/components/Canvas";
 
 type Shape =
   | { type: "rect"; x: number; y: number; width: number; height: number }
@@ -28,6 +27,9 @@ export class Game {
   private isPanning = false;
   private panStartX = 0;
   private panStartY = 0;
+  private scale = 1;
+  private minScale = 0.2;
+  private maxScale = 5;
 
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
@@ -38,6 +40,7 @@ export class Game {
     this.mouseDownHandler = this.mouseDownHandler.bind(this);
     this.mouseUpHandler = this.mouseUpHandler.bind(this);
     this.mouseMoveHandler = this.mouseMoveHandler.bind(this);
+    this.mouseZoomHandler = this.mouseZoomHandler.bind(this);
 
     this.init();
     this.initHandlers();
@@ -80,17 +83,17 @@ export class Game {
     this.existingShapes.forEach((shape) => {
       if (shape?.type === "rect") {
         this.ctx.strokeRect(
-          shape.x + this.offsetX,
-          shape.y + this.offsetY,
-          shape.width,
-          shape.height
+          shape.x * this.scale + this.offsetX,
+          shape.y * this.scale + this.offsetY,
+          shape.width * this.scale,
+          shape.height * this.scale
         );
       } else if (shape?.type === "circle") {
         this.ctx.beginPath();
         this.ctx.arc(
-          shape.centerX + this.offsetX,
-          shape.centerY + this.offsetY,
-          shape.radius,
+          shape.centerX * this.scale + this.offsetX,
+          shape.centerY * this.scale + this.offsetY,
+          shape.radius * this.scale,
           0,
           Math.PI * 2
         );
@@ -99,13 +102,13 @@ export class Game {
         if (shape.points.length > 1) {
           this.ctx.beginPath();
           this.ctx.moveTo(
-            shape.points[0].x + this.offsetX,
-            shape.points[0].y + this.offsetY
+            shape.points[0].x * this.scale + this.offsetX,
+            shape.points[0].y * this.scale + this.offsetY
           );
           for (let i = 1; i < shape.points.length; i++) {
             this.ctx.lineTo(
-              shape.points[i].x + this.offsetX,
-              shape.points[i].y + this.offsetY
+              shape.points[i].x * this.scale + this.offsetX,
+              shape.points[i].y * this.scale + this.offsetY
             );
           }
           this.ctx.stroke();
@@ -116,13 +119,13 @@ export class Game {
     if (this.currentStroke && this.currentStroke.points.length > 1) {
       this.ctx.beginPath();
       this.ctx.moveTo(
-        this.currentStroke.points[0].x + this.offsetX,
-        this.currentStroke.points[0].y + this.offsetY
+        this.currentStroke.points[0].x * this.scale + this.offsetX,
+        this.currentStroke.points[0].y * this.scale + this.offsetY
       );
       for (let i = 1; i < this.currentStroke.points.length; i++) {
         this.ctx.lineTo(
-          this.currentStroke.points[i].x + this.offsetX,
-          this.currentStroke.points[i].y + this.offsetY
+          this.currentStroke.points[i].x * this.scale + this.offsetX,
+          this.currentStroke.points[i].y * this.scale + this.offsetY
         );
       }
       this.ctx.stroke();
@@ -131,32 +134,20 @@ export class Game {
 
   mouseDownHandler(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    const worldX = e.clientX - rect.left - this.offsetX;
-    const worldY = e.clientY - rect.top - this.offsetY;
-
-    console.log(
-      "these are world coord , irresp of currnet post of screen",
-      worldX
-    );
-    console.log(worldY);
+    const worldX = (e.clientX - rect.left - this.offsetX) / this.scale;
+    const worldY = (e.clientY - rect.top - this.offsetY) / this.scale;
 
     if (e.button === 1) {
       this.isPanning = true;
       this.panStartX = e.clientX;
       this.panStartY = e.clientY;
-      console.log(
-        "panning start here , these are current screen positions ",
-        this.panStartX
-      );
-      console.log(this.panStartY);
+
       return;
     }
 
     this.clicked = true;
     this.startX = worldX;
     this.startY = worldY;
-    console.log("these are start x and y", this.startX);
-    console.log(this.startY);
 
     if (this.selectedTool === "pencil") {
       this.currentStroke = {
@@ -174,8 +165,8 @@ export class Game {
 
     this.clicked = false;
     const rect = this.canvas.getBoundingClientRect();
-    const worldX = e.clientX - rect.left - this.offsetX;
-    const worldY = e.clientY - rect.top - this.offsetY;
+    const worldX = (e.clientX - rect.left - this.offsetX) / this.scale;
+    const worldY = (e.clientY - rect.top - this.offsetY) / this.scale;
 
     const width = worldX - this.startX;
     const height = worldY - this.startY;
@@ -183,19 +174,36 @@ export class Game {
     let shape: Shape = null;
 
     if (this.selectedTool === "rect") {
+      let x = this.startX;
+      let y = this.startY;
+      let w = width;
+      let h = height;
+
+      if (w < 0) {
+        x += w;
+        w = Math.abs(w);
+      }
+      if (h < 0) {
+        y += h;
+        h = Math.abs(h);
+      }
+
       shape = {
         type: "rect",
-        x: this.startX,
-        y: this.startY,
-        width,
-        height,
+        x,
+        y,
+        width: w,
+        height: h,
       };
     } else if (this.selectedTool === "circle") {
+      const centerX = this.startX + width / 2;
+      const centerY = this.startY + height / 2;
       const radius = Math.max(Math.abs(width), Math.abs(height)) / 2;
+
       shape = {
         type: "circle",
-        centerX: this.startX + radius,
-        centerY: this.startY + radius,
+        centerX,
+        centerY,
         radius,
       };
     } else if (this.selectedTool === "pencil") {
@@ -217,6 +225,20 @@ export class Game {
     );
   }
 
+  isMouseOverShape(mouseX: number, mouseY: number, shape: Shape) {
+    if (shape?.type === "rect") {
+      return (
+        mouseX >= shape.x &&
+        mouseX <= shape.x + shape.width &&
+        mouseY >= shape.y &&
+        mouseY <= shape.y + shape.height
+      );
+    }
+
+    if (shape?.type === "circle") {
+    }
+  }
+
   mouseMoveHandler(e: MouseEvent) {
     if (this.isPanning) {
       const dx = e.clientX - this.panStartX;
@@ -232,47 +254,75 @@ export class Game {
     if (!this.clicked) return;
 
     const rect = this.canvas.getBoundingClientRect();
-    const worldX = e.clientX - rect.left - this.offsetX;
-    console.log(
-      "offsetx is the diff in curr post  and current pan start ",
-      this.offsetX
-    );
-    const worldY = e.clientY - rect.top - this.offsetY;
+    const worldX = (e.clientX - rect.left - this.offsetX) / this.scale;
+    const worldY = (e.clientY - rect.top - this.offsetY) / this.scale;
     const width = worldX - this.startX;
     const height = worldY - this.startY;
 
+    if (this.selectedTool === "pencil") {
+      this.currentStroke?.points.push({ x: worldX, y: worldY });
+    }
+
+    if (this.selectedTool === "eraser") {
+      this.existingShapes = this.existingShapes.filter(
+        (shape) => !this.isMouseOverShape(worldX, worldY, shape)
+      );
+    }
+
     this.clearCanvas();
+
     this.ctx.strokeStyle = "white";
 
     if (this.selectedTool === "rect") {
       this.ctx.strokeRect(
-        this.startX + this.offsetX,
-        this.startY + this.offsetY,
-        width,
-        height
+        this.startX * this.scale + this.offsetX,
+        this.startY * this.scale + this.offsetY,
+        width * this.scale,
+        height * this.scale
       );
     } else if (this.selectedTool === "circle") {
-      const radius = Math.max(Math.abs(width), Math.abs(height)) / 2;
-      const centerX = this.startX + radius;
-      const centerY = this.startY + radius;
+      const radius =
+        (Math.max(Math.abs(width), Math.abs(height)) / 2) * this.scale;
+      const centerX = (this.startX + width / 2) * this.scale + this.offsetX;
+      const centerY = (this.startY + height / 2) * this.scale + this.offsetY;
       this.ctx.beginPath();
-      this.ctx.arc(
-        centerX + this.offsetX,
-        centerY + this.offsetY,
-        radius,
-        0,
-        Math.PI * 2
-      );
+      this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       this.ctx.stroke();
-    } else if (this.selectedTool === "pencil") {
-      this.currentStroke?.points.push({ x: worldX, y: worldY });
-      this.clearCanvas();
     }
+  }
+
+  mouseZoomHandler(e: WheelEvent) {
+    e.preventDefault();
+
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const worldX = (mouseX - this.offsetX) / this.scale;
+    const worldY = (mouseY - this.offsetY) / this.scale;
+
+    const zoomFactor = 1.1;
+    let newScale = this.scale;
+
+    if (e.deltaY < 0) {
+      newScale = Math.min(this.maxScale, this.scale * zoomFactor);
+    } else {
+      //zoom out
+      newScale = Math.max(this.minScale, this.scale / zoomFactor);
+    }
+
+    this.offsetX = mouseX - worldX * newScale;
+    this.offsetY = mouseY - worldY * newScale;
+
+    this.scale = newScale;
+
+    this.clearCanvas();
   }
 
   initMouseHandlers() {
     this.canvas.addEventListener("mousedown", this.mouseDownHandler);
     this.canvas.addEventListener("mouseup", this.mouseUpHandler);
     this.canvas.addEventListener("mousemove", this.mouseMoveHandler);
+    this.canvas.addEventListener("wheel", this.mouseZoomHandler);
   }
 }
