@@ -65,10 +65,29 @@ export class Game {
   initHandlers() {
     this.socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
+
       if (message.type === "chat") {
         const parsedShape = JSON.parse(message.message);
         this.existingShapes.push(parsedShape.shape);
         this.clearCanvas();
+        return;
+      }
+      if (message.type === "erase") {
+        const parsed = JSON.parse(message.message);
+        const shapeToRemove: Shape | undefined = parsed.shape;
+        const eraseAt: { x: number; y: number } | undefined = parsed.eraseAt;
+
+        if (shapeToRemove) {
+          this.existingShapes = this.existingShapes.filter(
+            (s) => !this.areShapesEqual(s, shapeToRemove)
+          );
+        } else if (eraseAt) {
+          this.existingShapes = this.existingShapes.filter(
+            (s) => !this.isMouseOverShape(eraseAt.x, eraseAt.y, s)
+          );
+        }
+        this.clearCanvas();
+        return;
       }
     };
   }
@@ -236,7 +255,22 @@ export class Game {
     }
 
     if (shape?.type === "circle") {
+      const dx = mouseX - shape.centerX;
+      const dy = mouseY - shape.centerY;
+
+      return dx * dx + dy * dy <= shape.radius * shape.radius;
     }
+
+    if (shape?.type === "pencil") {
+      const threshold = 5;
+      return shape.points.some((p) => {
+        const dx = mouseX - p.x;
+        const dy = mouseY - p.y;
+        return dx * dx + dy * dy <= threshold * threshold;
+      });
+    }
+
+    return false;
   }
 
   mouseMoveHandler(e: MouseEvent) {
@@ -264,9 +298,27 @@ export class Game {
     }
 
     if (this.selectedTool === "eraser") {
-      this.existingShapes = this.existingShapes.filter(
-        (shape) => !this.isMouseOverShape(worldX, worldY, shape)
+      const shapesToRemove = this.existingShapes.filter((shape) =>
+        this.isMouseOverShape(worldX, worldY, shape)
       );
+      if (shapesToRemove.length > 0) {
+        this.existingShapes = this.existingShapes.filter(
+          (shape) => !this.isMouseOverShape(worldX, worldY, shape)
+        );
+
+        shapesToRemove.forEach((shape) => {
+          this.socket.send(
+            JSON.stringify({
+              type: "erase",
+              roomId: Number(this.roomId),
+              message: JSON.stringify({
+                shape,
+                eraseAt: { x: worldX, y: worldY },
+              }),
+            })
+          );
+        });
+      }
     }
 
     this.clearCanvas();
@@ -324,5 +376,42 @@ export class Game {
     this.canvas.addEventListener("mouseup", this.mouseUpHandler);
     this.canvas.addEventListener("mousemove", this.mouseMoveHandler);
     this.canvas.addEventListener("wheel", this.mouseZoomHandler);
+  }
+
+  private areShapesEqual(a: Shape, b: Shape): boolean {
+    if (a === b) return true;
+    if (a === null || b === null) return false;
+    try {
+      if (JSON.stringify(a) === JSON.stringify(b)) return true;
+    } catch {}
+    if (a.type !== b.type) return false;
+    if (a.type === "rect" && b.type === "rect") {
+      return (
+        a.x === b.x &&
+        a.y === b.y &&
+        a.width === b.width &&
+        a.height === b.height
+      );
+    }
+    if (a.type === "circle" && b.type === "circle") {
+      return (
+        a.centerX === b.centerX &&
+        a.centerY === b.centerY &&
+        a.radius === b.radius
+      );
+    }
+    if (a.type === "pencil" && b.type === "pencil") {
+      if (a.points.length !== b.points.length) return false;
+      for (let i = 0; i < a.points.length; i++) {
+        if (
+          a.points[i].x !== b.points[i].x ||
+          a.points[i].y !== b.points[i].y
+        ) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 }

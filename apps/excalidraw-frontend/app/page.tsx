@@ -167,8 +167,8 @@ export default function Home() {
                 </div>
                 <h2 className="font-bold text-xl">Invite Others</h2>
                 <p className="text-gray-600">
-                  Share your canvas link. Others can join instantly from any
-                  device.
+                  Share your canvas name or id . Others can join instantly from
+                  any device.
                 </p>
               </div>
 

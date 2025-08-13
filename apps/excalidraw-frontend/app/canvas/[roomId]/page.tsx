@@ -1,4 +1,6 @@
 import { RoomCanvas } from "@/components/RoomCanvas";
+import axios from "axios";
+import { HTTP_BACKEND } from "@/config";
 
 export default async function CanvasPage({
   params,
@@ -7,8 +9,13 @@ export default async function CanvasPage({
     roomId: string;
   };
 }) {
-  const roomId = (await params).roomId;
-  console.log(roomId);
+  const slugOrId = (await params).roomId;
+  // If it's already a number string, use it directly. Otherwise, resolve slug -> id
+  let numericId = Number(slugOrId);
+  if (Number.isNaN(numericId)) {
+    const res = await axios.get(`${HTTP_BACKEND}/room/${slugOrId}`);
+    numericId = Number(res.data.id);
+  }
 
-  return <RoomCanvas roomId={roomId} />;
+  return <RoomCanvas roomId={String(numericId)} />;
 }

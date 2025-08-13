@@ -1,9 +1,16 @@
 "use client";
 import { Button } from "@repo/ui/button";
-import { Palette } from "lucide-react";
+import { Palette, User } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export function Navbar() {
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem("token"));
+  }, []);
+
   return (
     // fixed container
     <nav className="fixed top-0 w-full bg-white/70 backdrop-blur-sm border-b border-gray-100 z-50">
@@ -36,15 +43,22 @@ export function Navbar() {
               How it works
             </Link>
 
-            <Link href={"/signin"}>
-              <Button variant="outline" size="sm">
-                Sign In
+            {hasToken ? (
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
+            ) : (
+              <Link href={"/signin"}>
+                <Button variant="outline" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+            )}
+            <Link href={"/dashboard"}>
+              <Button variant="primary" size="sm">
+                Start Drawing
               </Button>
             </Link>
-
-            <Button variant="primary" size="sm">
-              Start Drawing
-            </Button>
           </div>
         </div>
       </div>

@@ -117,6 +117,12 @@ app.post("/room", middleware, async (req, res) => {
 
     res.json({
       roomId: room.id,
+      room: {
+        id: room.id,
+        slug: room.slug,
+        createdAt: room.createdAt,
+        adminId: room.adminId,
+      },
     });
   } catch (e) {
     res.status(411).json({
@@ -160,8 +166,24 @@ app.get("/room/:slug", async (req, res) => {
   });
 
   res.json({
-    id: room?.id,
+    id: room.id,
+    slug: room.slug,
+    createdAt: room.createdAt,
+    adminId: room.adminId,
   });
+});
+
+app.get("/userRooms", middleware, async (req, res) => {
+  //@ts-ignore
+  const userId = req.userId;
+
+  const rooms = await prismaClient.room.findMany({
+    where: {
+      adminId: userId,
+    },
+  });
+
+  res.json(rooms);
 });
 
 app.listen(3001, () => {

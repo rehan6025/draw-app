@@ -35,6 +35,7 @@ export function AuthPage({ isSignIn: initialIsSignIn }: { isSignIn: boolean }) {
         return;
       }
       localStorage.setItem("token", token);
+      document.cookie = `token=${token}; Max-Age=${60 * 60 * 24 * 27}; Path=/; SameSite=Lax`;
 
       toast.success("Signed in Successfully");
       setTimeout(() => {
@@ -51,6 +52,8 @@ export function AuthPage({ isSignIn: initialIsSignIn }: { isSignIn: boolean }) {
         return;
       }
       localStorage.setItem("token", token);
+      // Also set a cookie so server components can access the token
+      document.cookie = `token=${token}; Max-Age=${7 * 24 * 60 * 60}; Path=/; SameSite=Lax`;
 
       toast.success("Signed up Successfully");
       setTimeout(() => {
