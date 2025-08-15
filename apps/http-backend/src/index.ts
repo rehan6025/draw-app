@@ -177,13 +177,36 @@ app.get("/userRooms", middleware, async (req, res) => {
   //@ts-ignore
   const userId = req.userId;
 
-  const rooms = await prismaClient.room.findMany({
-    where: {
-      adminId: userId,
-    },
-  });
+  try {
+    const rooms = await prismaClient.room.findMany({
+      where: {
+        adminId: userId,
+      },
+      select: {
+        id: true,
+        slug: true,
+        createdAt: true,
+        admin: {
+          select: {
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            chats: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-  res.json(rooms);
+    res.json(rooms);
+  } catch (e) {
+    console.error("Error fetching rooms:", e);
+    res.status(500).json({ message: "Error fetching rooms" });
+  }
 });
 
 app.listen(3001, () => {

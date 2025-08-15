@@ -1,12 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Room } from "../app/dashboard/page";
 import RoomCard from "./RoomCard";
-import { BadgePlus, Grid3X3, List, Plus, Search } from "lucide-react";
+import { BadgePlus, Grid3X3, List, Palette, Plus, Search } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import axios from "axios";
 import { HTTP_BACKEND } from "@/config";
 import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
   const [rooms, setRooms] = useState(initialRooms);
@@ -15,43 +16,57 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
   const router = useRouter();
 
   const handleCreateRoom = async (name: string) => {
-    if (!name.trimEnd()) return;
+    if (!name.trim()) return;
+    const token = localStorage.getItem("token");
+    const toastId = toast.loading("Creating room...");
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(
+      const { data: createdRoom } = await axios.post(
         `${HTTP_BACKEND}/room`,
-        {
-          name: name.trim(),
-        },
+        { name: name.trim() },
         { headers: { Authorization: token } }
       );
 
-      const updatedRooms = await axios.get(`${HTTP_BACKEND}/userRooms`, {
-        headers: { Authorization: token },
-      });
-      setRooms(updatedRooms.data);
-
+      setRooms((prev) => [...prev, createdRoom]); // immediate UI update
       setNewRoom("");
-      router.push(`/canvas/${res.data.roomId}`);
+      toast.success("Room created!", { id: toastId });
+
+      router.push(`/canvas/${createdRoom.roomId}`);
     } catch (error) {
-      console.log("RoomList :: handleCreateRoom ::", error);
+      toast.error("Failed to create room", { id: toastId });
     }
   };
 
   const handleJoinRoom = async (roomName: string) => {
     try {
+      const id = toast.loading("Entering...");
       const res = await axios.get(`${HTTP_BACKEND}/room/${roomName}`);
       const room = res.data;
 
       setRooms((prevRooms) => [...prevRooms, room]);
-
+      toast.dismiss(id);
       setNewRoom("");
       router.push(`/canvas/${room.id}`);
     } catch (error) {
       console.log("Roomlist :: handleJoinRoom ::", error);
     }
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    axios
+      .get(`${HTTP_BACKEND}/userRooms`, {
+        headers: { Authorization: token },
+      })
+      .then((res) => {
+        setRooms(res.data);
+      })
+      .catch((err) => {
+        console.error("Error fetching updated rooms:", err);
+      });
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-8">
@@ -120,10 +135,30 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
       </div>
 
       <div className="grid">
-        {rooms.map((room) => (
-          <RoomCard key={room.id} room={room} />
-        ))}
+        {rooms.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Palette className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No rooms found
+            </h3>
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                : "space-y-4"
+            }
+          >
+            {rooms.map((room) => (
+              <RoomCard key={room.id} room={room} viewMode={viewMode} />
+            ))}
+          </div>
+        )}
       </div>
+      <Toaster />
     </div>
   );
 }

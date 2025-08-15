@@ -9,6 +9,12 @@ export type Room = {
   slug: string;
   createdAt: string;
   adminId: string;
+  admin: {
+    name: string;
+  };
+  _count: {
+    chats: number;
+  };
 };
 
 export default async function Dashboard() {
@@ -21,18 +27,23 @@ export default async function Dashboard() {
   );
 }
 
+//@ts-ignore
 async function getUserRooms(): Promise<Room[]> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  console.log(token);
-  if (!token) return [];
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+    console.log(token);
+    if (!token) return [];
 
-  const res = await axios.get(`${HTTP_BACKEND}/userRooms`, {
-    headers: {
-      Authorization: token,
-    },
-  });
-  return res.data as Room[];
+    const res = await axios.get(`${HTTP_BACKEND}/userRooms`, {
+      headers: {
+        Authorization: token,
+      },
+    });
+    return res.data as Room[];
+  } catch (error) {
+    console.log("dashboard ::", error);
+  }
 }
 
 // "use client";
