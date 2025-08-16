@@ -113,6 +113,10 @@ app.post("/room", middleware, async (req, res) => {
         slug: parsedData.data.name,
         adminId: userId,
       },
+      include: {
+        admin: { select: { name: true } },
+        _count: { select: { chats: true } },
+      },
     });
 
     res.json({
@@ -122,12 +126,57 @@ app.post("/room", middleware, async (req, res) => {
         slug: room.slug,
         createdAt: room.createdAt,
         adminId: room.adminId,
+        admin: {
+          name: room.admin.name,
+        },
+        _count: {
+          chats: room._count.chats,
+        },
       },
     });
   } catch (e) {
     res.status(411).json({
       message: "Room already exists with this name",
     });
+  }
+});
+
+//delete room endpoint
+app.delete("/room/:roomId", middleware, async (req, res) => {
+  const roomId = Number(req.params.roomId);
+  //@ts-ignore: Todo: fix this
+  const userId = req.userId;
+  try {
+    //first find all chats in this room , delte them
+    const room = await prismaClient.room.findFirst({
+      where: {
+        id: roomId,
+        adminId: userId,
+      },
+    });
+
+    if (!room) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this room" });
+    }
+
+    await prismaClient.chat.deleteMany({
+      where: {
+        roomId: roomId,
+      },
+    });
+
+    await prismaClient.room.delete({
+      where: {
+        id: roomId,
+      },
+    });
+
+    res.status(204).json({ message: "Room deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting room:", error);
+    res.status(404).json({ message: "Error deleting room" });
   }
 });
 
@@ -163,13 +212,27 @@ app.get("/room/:slug", async (req, res) => {
     where: {
       slug,
     },
+
+    include: {
+      admin: { select: { name: true } },
+      _count: { select: { chats: true } },
+    },
   });
 
   res.json({
-    id: room.id,
-    slug: room.slug,
-    createdAt: room.createdAt,
-    adminId: room.adminId,
+    roomId: room.id,
+    room: {
+      id: room.id,
+      slug: room.slug,
+      createdAt: room.createdAt,
+      adminId: room.adminId,
+      admin: {
+        name: room.admin.name,
+      },
+      _count: {
+        chats: room._count.chats,
+      },
+    },
   });
 });
 

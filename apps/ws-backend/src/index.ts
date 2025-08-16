@@ -101,6 +101,33 @@ wss.on("connection", function connection(ws, request) {
     if (parsedData.type && parsedData.type.trim() === "erase") {
       const roomId: number = Number(parsedData.roomId);
       const message = parsedData.message; // contains shape to erase
+
+      // Parse the message to get the shapeId
+      const parsedMessage = JSON.parse(message);
+      const shapeId = parsedMessage.shapeId;
+
+      try {
+        const chatToDelete = await prismaClient.chat.findFirst({
+          where: {
+            roomId: roomId,
+            message: {
+              contains: `"id":"${shapeId}"`,
+            },
+          },
+        });
+
+        if (chatToDelete) {
+          await prismaClient.chat.delete({
+            where: {
+              id: chatToDelete.id,
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting chat:", error);
+      }
+
+      //ab broadcast
       users.forEach((user) => {
         if (user.rooms.includes(roomId)) {
           user.ws.send(

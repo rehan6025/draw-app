@@ -3,9 +3,22 @@ import { getExistingShapes } from "./http";
 import { Tool } from "@/components/Canvas";
 
 type Shape =
-  | { type: "rect"; x: number; y: number; width: number; height: number }
-  | { type: "circle"; centerX: number; centerY: number; radius: number }
-  | { type: "pencil"; points: { x: number; y: number }[] }
+  | {
+      id: string;
+      type: "rect";
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }
+  | {
+      id: string;
+      type: "circle";
+      centerX: number;
+      centerY: number;
+      radius: number;
+    }
+  | { id: string; type: "pencil"; points: { x: number; y: number }[] }
   | null;
 
 export class Game {
@@ -30,6 +43,10 @@ export class Game {
   private scale = 1;
   private minScale = 0.2;
   private maxScale = 5;
+
+  private generateShapeId() {
+    return Math.random().toString(36).slice(2, 7);
+  }
 
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
@@ -208,6 +225,7 @@ export class Game {
       }
 
       shape = {
+        id: this.generateShapeId(),
         type: "rect",
         x,
         y,
@@ -220,13 +238,18 @@ export class Game {
       const radius = Math.max(Math.abs(width), Math.abs(height)) / 2;
 
       shape = {
+        id: this.generateShapeId(),
         type: "circle",
         centerX,
         centerY,
         radius,
       };
     } else if (this.selectedTool === "pencil") {
-      shape = this.currentStroke;
+      shape = {
+        id: this.generateShapeId(),
+        type: "pencil",
+        points: this.currentStroke!.points,
+      };
       this.currentStroke = null;
     }
 
@@ -312,7 +335,7 @@ export class Game {
               type: "erase",
               roomId: Number(this.roomId),
               message: JSON.stringify({
-                shape,
+                shapeId: shape?.id,
                 eraseAt: { x: worldX, y: worldY },
               }),
             })

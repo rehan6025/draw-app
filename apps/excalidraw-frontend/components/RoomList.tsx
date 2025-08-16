@@ -46,9 +46,37 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
       setRooms((prevRooms) => [...prevRooms, room]);
       toast.dismiss(id);
       setNewRoom("");
-      router.push(`/canvas/${room.id}`);
+      router.push(`/canvas/${room.roomId}`);
     } catch (error) {
       console.log("Roomlist :: handleJoinRoom ::", error);
+    }
+  };
+
+  const handleDeleteRoom = async (roomId: number) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Authentication required");
+      return;
+    }
+
+    const toastId = toast.loading("Deleting room...");
+
+    try {
+      //temp remove ffrom localstorage for better ux
+      setRooms((prevRooms) => prevRooms.filter((room) => room.id !== roomId));
+
+      await axios.get(`${HTTP_BACKEND}/room/${roomId}`, {
+        method: "DELETE",
+        headers: { Authorization: token },
+      });
+
+      toast.success("Room deleted!", { id: toastId });
+    } catch (error) {
+      setRooms((prevRooms) => [
+        ...prevRooms,
+        rooms.find((room) => room.id === roomId)!,
+      ]);
+      toast.error("Failed to delete room", { id: toastId });
     }
   };
 
@@ -152,8 +180,13 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
                 : "space-y-4"
             }
           >
-            {rooms.map((room) => (
-              <RoomCard key={room.id} room={room} viewMode={viewMode} />
+            {rooms.map((room, index) => (
+              <RoomCard
+                key={`${room.id}-${room.slug}-${index}`}
+                room={room}
+                viewMode={viewMode}
+                onDelete={handleDeleteRoom}
+              />
             ))}
           </div>
         )}
