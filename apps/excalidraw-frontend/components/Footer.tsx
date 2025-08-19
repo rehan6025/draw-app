@@ -21,7 +21,11 @@ export function Footer() {
             <a href="" className="hover:text-white transition-all">
               Support
             </a>
-            <a href="" className="hover:text-white transition-all">
+            <a
+              href="https://linktr.ee/rehan_999"
+              className="hover:text-white transition-all"
+              target="_blank"
+            >
               Contact
             </a>
           </div>

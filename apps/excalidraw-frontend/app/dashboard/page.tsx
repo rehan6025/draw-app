@@ -20,7 +20,7 @@ export type Room = {
 export default async function Dashboard() {
   const rooms: Room[] = await getUserRooms();
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-orange-50 ">
+    <div className="h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-orange-50 ">
       <Navbar />
       <RoomList initialRooms={rooms} />
     </div>
@@ -45,7 +45,6 @@ async function getUserRooms(): Promise<Room[]> {
     console.log("dashboard ::", error);
   }
 }
-
 // "use client";
 
 // import React, { useState } from "react";

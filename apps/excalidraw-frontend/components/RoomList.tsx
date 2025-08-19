@@ -65,8 +65,8 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
       //temp remove ffrom localstorage for better ux
       setRooms((prevRooms) => prevRooms.filter((room) => room.id !== roomId));
 
-      await axios.get(`${HTTP_BACKEND}/room/${roomId}`, {
-        method: "DELETE",
+      const res = await axios.get(`${HTTP_BACKEND}/delete-room/${roomId}`, {
+        method: "GET",
         headers: { Authorization: token },
       });
 

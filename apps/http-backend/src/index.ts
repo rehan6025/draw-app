@@ -142,7 +142,7 @@ app.post("/room", middleware, async (req, res) => {
 });
 
 //delete room endpoint
-app.delete("/room/:roomId", middleware, async (req, res) => {
+app.get("/delete-room/:roomId", middleware, async (req, res) => {
   const roomId = Number(req.params.roomId);
   //@ts-ignore: Todo: fix this
   const userId = req.userId;
@@ -207,6 +207,7 @@ app.get("/chats/:roomId", async (req, res) => {
 });
 
 app.get("/room/:slug", async (req, res) => {
+  console.log("reached /room/slug");
   const slug = req.params.slug;
   const room = await prismaClient.room.findFirst({
     where: {

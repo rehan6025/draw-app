@@ -1,5 +1,7 @@
+import Features from "@/components/Features";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/NavBar";
+import SpotlightCard from "@/components/SpotlightCard";
 import { Button } from "@repo/ui/button";
 import {
   ArrowRight,
@@ -11,7 +13,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -39,18 +41,23 @@ export default function Home() {
             </p>
 
             <div className="sm:flex-row flex flex-col justify-center mb-12 gap-4">
-              <Button
-                variant="primary"
-                size="lg"
-                className="flex items-center justify-center space-x-2"
-              >
-                Start Creating Now
-                <ArrowRight className="ml-1 w-5 h-5" />
-              </Button>
-              <Button variant="outline" size="lg">
-                <Play className="mr-1 w-5 h-5" />
-                Watch Demo
-              </Button>
+              <Link href={"/signin"}>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="flex items-center justify-center space-x-2"
+                >
+                  Start Creating Now
+                  <ArrowRight className="ml-1 w-5 h-5" />
+                </Button>
+              </Link>
+
+              <Link href={""}>
+                <Button variant="outline" size="lg">
+                  <Play className="mr-1 w-5 h-5" />
+                  Watch Demo
+                </Button>
+              </Link>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-center items-center gap-8 text-sm text-gray-500">
@@ -149,42 +156,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center ">
-                <div className=" bg-gradient-to-br from-purple-500 to-blue-500 w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-6 ">
-                  <span className="text-2xl font-bold text-white">1</span>
-                </div>
-                <h2 className="font-bold text-xl">Create Canvas</h2>
-                <p className="text-gray-600">
-                  Start a new canvas instantly. No account required to get
-                  started.
-                </p>
-              </div>
-
-              <div className="text-center ">
-                <div className=" bg-gradient-to-br from-blue-500 to-orange-500 w-16 h-16 flex items-center justify-center rounded-full mx-auto mb-6 ">
-                  <span className="text-2xl font-bold text-white">2</span>
-                </div>
-                <h2 className="font-bold text-xl">Invite Others</h2>
-                <p className="text-gray-600">
-                  Share your canvas name or id . Others can join instantly from
-                  any device.
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-2xl font-bold text-white">3</span>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  Create Together
-                </h3>
-                <p className="text-gray-600">
-                  Draw and create together in real-time. See everyone's work
-                  live.
-                </p>
-              </div>
-            </div>
+            <Features />
           </div>
         </section>
 
@@ -197,12 +169,11 @@ export default function Home() {
               Join thousands of artists and creative teams already using
               DrawTogether.
             </p>
-            <Button variant="secondary" size="lg">
-              Start Drawing for free
-            </Button>
-            <p className="text-purple-200 text-sm pt-4">
-              No credit card required • Free forever plan available
-            </p>
+            <Link href={"/dashboard"}>
+              <Button variant="secondary" size="lg">
+                Start Drawing for free
+              </Button>
+            </Link>
           </div>
         </section>
       </div>
