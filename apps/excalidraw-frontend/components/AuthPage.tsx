@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   CheckCircle,
 } from "lucide-react";
+import PageLoader from "./PageLoader";
 
 export function AuthPage({ isSignIn: initialIsSignIn }: { isSignIn: boolean }) {
   const [email, setEmail] = useState("");
@@ -22,7 +23,13 @@ export function AuthPage({ isSignIn: initialIsSignIn }: { isSignIn: boolean }) {
   const [name, setName] = useState("");
   const [isSignIn, setIsSignIn] = useState(initialIsSignIn);
   const [showPassword, setShowPassword] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
   const router = useRouter();
+
+  function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   async function handleAuth() {
     if (isSignIn) {
@@ -38,9 +45,13 @@ export function AuthPage({ isSignIn: initialIsSignIn }: { isSignIn: boolean }) {
       document.cookie = `token=${token}; Max-Age=${60 * 60 * 24 * 27}; Path=/; SameSite=Lax`;
 
       toast.success("Signed in Successfully");
+      await delay(1000);
+
+      setIsNavigating(true);
+
       setTimeout(() => {
         router.push("/dashboard");
-      }, 1500);
+      }, 1000);
     } else {
       const token: string = await signupUser(name, email, password);
 
@@ -48,7 +59,7 @@ export function AuthPage({ isSignIn: initialIsSignIn }: { isSignIn: boolean }) {
         toast.error("Invalid credentials");
         setTimeout(() => {
           router.push("/signup");
-        }, 2000);
+        }, 1500);
         return;
       }
       localStorage.setItem("token", token);
@@ -56,26 +67,27 @@ export function AuthPage({ isSignIn: initialIsSignIn }: { isSignIn: boolean }) {
       document.cookie = `token=${token}; Max-Age=${7 * 24 * 60 * 60}; Path=/; SameSite=Lax`;
 
       toast.success("Signed up Successfully");
+
+      await delay(1000);
+
+      setIsNavigating(true);
       setTimeout(() => {
         router.push("/dashboard");
-      }, 1500);
+      }, 1000);
     }
+  }
+
+  if (isNavigating) {
+    return <PageLoader />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-orange-50 flex items-center justify-center p-4">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-20 w-32 h-32 bg-purple-500 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-40 h-40 bg-blue-500 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-orange-500 rounded-full blur-3xl"></div>
-      </div>
-
       <div className="relative w-full max-w-md">
         {/* Auth Card */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
           {/* Logo */}
-          <div className="flex items-center justify-center space-x-2 mb-8">
+          <div className="flex items-center justify-center space-x-3   mb-8">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
               <Palette className="w-6 h-6 text-white" />
             </div>

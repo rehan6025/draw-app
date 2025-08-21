@@ -2,6 +2,7 @@ import { Room } from "../app/dashboard/page";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns"; // For nice date formatting
 import { Trash2 } from "lucide-react"; // Import trash icon
+import { useState } from "react";
 
 export default function RoomCard({
   room,

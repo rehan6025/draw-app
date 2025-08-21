@@ -11,6 +11,11 @@ export function Navbar() {
     setHasToken(!!localStorage.getItem("token"));
   }, []);
 
+  const handleSignOut = () => {
+    localStorage.clear();
+    setHasToken(false);
+  };
+
   return (
     // fixed container
     <nav className="fixed top-0 w-full bg-white/70 backdrop-blur-sm border-b border-gray-100 z-50">
@@ -44,9 +49,11 @@ export function Navbar() {
             </Link>
 
             {hasToken ? (
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
+              <Link href={"/"}>
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  Sign out
+                </Button>
+              </Link>
             ) : (
               <Link href={"/signin"}>
                 <Button variant="outline" size="sm">

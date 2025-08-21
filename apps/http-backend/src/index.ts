@@ -9,6 +9,7 @@ import {
 } from "@repo/common";
 import { prismaClient } from "@repo/db";
 import cors from "cors";
+import bcrypt from "bcrypt";
 
 const app = express();
 app.use(express.json());
@@ -34,11 +35,13 @@ app.post("/signup", async (req, res) => {
       return res.status(409).json("invalid credentials");
     }
 
+    const hashedPass = await bcrypt.hash(parsedData.data.password, 10);
+
     const user = await prismaClient.user.create({
       data: {
         email: parsedData.data?.username,
         // TODO: Hash the pw
-        password: parsedData.data.password,
+        password: hashedPass,
         name: parsedData.data.name,
       },
     });
@@ -73,15 +76,22 @@ app.post("/signin", async (req, res) => {
   const user = await prismaClient.user.findFirst({
     where: {
       email: parsedData.data.username,
-      password: parsedData.data.password,
     },
   });
 
   if (!user) {
-    res.status(403).json({
-      message: "Not authorized",
+    return res.status(403).json({
+      message: "Invalid credentials",
     });
-    return;
+  } else {
+    const passMatch = await bcrypt.compare(
+      parsedData.data.password,
+      user.password
+    );
+
+    if (!passMatch) {
+      return res.status(403).json({ message: "Invalid credentials" });
+    }
   }
 
   const token = jwt.sign(

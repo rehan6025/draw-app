@@ -8,11 +8,13 @@ import axios from "axios";
 import { HTTP_BACKEND } from "@/config";
 import { useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
+import PageLoader from "./PageLoader";
 
 export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
   const [rooms, setRooms] = useState(initialRooms);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [newRoom, setNewRoom] = useState<string>("");
+  const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
 
   const handleCreateRoom = async (name: string) => {
@@ -31,6 +33,7 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
       setNewRoom("");
       toast.success("Room created!", { id: toastId });
 
+      setIsNavigating(true);
       router.push(`/canvas/${createdRoom.roomId}`);
     } catch (error) {
       toast.error("Failed to create room", { id: toastId });
@@ -46,6 +49,8 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
       setRooms((prevRooms) => [...prevRooms, room]);
       toast.dismiss(id);
       setNewRoom("");
+
+      setIsNavigating(true);
       router.push(`/canvas/${room.roomId}`);
     } catch (error) {
       console.log("Roomlist :: handleJoinRoom ::", error);
@@ -95,6 +100,10 @@ export default function RoomList({ initialRooms }: { initialRooms: Room[] }) {
         console.error("Error fetching updated rooms:", err);
       });
   }, []);
+
+  if (isNavigating) {
+    return <PageLoader />;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-8">
