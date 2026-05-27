@@ -2,6 +2,7 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import Features from "@/components/Features";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/NavBar";
+import { WS_URL } from "@/config";
 import { Button } from "@repo/ui/button";
 import {
     ArrowRight,
@@ -16,6 +17,7 @@ import {
 import Link from "next/link";
 
 export default function Home() {
+    console.log(WS_URL);
     return (
         <>
             <Navbar />
