@@ -108,113 +108,121 @@ wss.on("connection", function connection(ws, request) {
         user.isAlive = true;
     });
 
+    ws.on("error", (err) => {
+        console.error("WS ERROR:", err);
+    });
+
     ws.on("message", async function message(data) {
-        let parsedData;
-        if (typeof data !== "string") {
-            parsedData = JSON.parse(data.toString());
-        } else {
-            parsedData = JSON.parse(data); // {type: "join-room", roomId: 1}
-        }
-
-        if (parsedData.type === "join_room") {
-            const user = users.get(ws);
-            if (!user) return;
-            user?.rooms.push(Number(parsedData.roomId));
-            const rId = Number(parsedData.roomId);
-            if (!roomMembers.has(rId)) roomMembers.set(rId, new Set());
-            roomMembers.get(rId)!.add(ws);
-            try {
-                ws.send(
-                    JSON.stringify({
-                        type: "joined",
-                        roomId: rId,
-                    })
-                );
-            } catch {}
-        }
-
-        if (parsedData.type === "leave_room") {
-            const user = users.get(ws);
-            if (!user) {
-                return;
+        try {
+            let parsedData;
+            if (typeof data !== "string") {
+                parsedData = JSON.parse(data.toString());
+            } else {
+                parsedData = JSON.parse(data); // {type: "join-room", roomId: 1}
             }
-            const leaveId = Number(parsedData.room ?? parsedData.roomId);
-            user.rooms = user.rooms.filter((x) => x !== leaveId);
-            const set = roomMembers.get(leaveId);
-            if (set) {
-                set.delete(ws);
-                if (set.size === 0) roomMembers.delete(leaveId);
-            }
-        }
 
-        if (parsedData.type && parsedData.type.trim() === "chat") {
-            const roomId: number = Number(parsedData.roomId);
-            const message = parsedData.message;
-
-            if (!SKIP_DB) {
+            if (parsedData.type === "join_room") {
+                const user = users.get(ws);
+                if (!user) return;
+                user?.rooms.push(Number(parsedData.roomId));
+                const rId = Number(parsedData.roomId);
+                if (!roomMembers.has(rId)) roomMembers.set(rId, new Set());
+                roomMembers.get(rId)!.add(ws);
                 try {
-                    await prismaClient.chat.create({
-                        data: {
-                            roomId: roomId,
-                            message,
-                            userId,
-                        },
-                    });
-                } catch (e) {
-                    console.error("ws: chat.create failed", e);
+                    ws.send(
+                        JSON.stringify({
+                            type: "joined",
+                            roomId: rId,
+                        }),
+                    );
+                } catch {}
+            }
+
+            if (parsedData.type === "leave_room") {
+                const user = users.get(ws);
+                if (!user) {
+                    return;
+                }
+                const leaveId = Number(parsedData.room ?? parsedData.roomId);
+                user.rooms = user.rooms.filter((x) => x !== leaveId);
+                const set = roomMembers.get(leaveId);
+                if (set) {
+                    set.delete(ws);
+                    if (set.size === 0) roomMembers.delete(leaveId);
                 }
             }
 
-            const msg: OutgoingMessage = { type: "chat", message, roomId };
-            if (!roomBuffers.has(roomId)) {
-                roomBuffers.set(roomId, []);
-            }
+            if (parsedData.type && parsedData?.type === "chat") {
+                const roomId: number = Number(parsedData.roomId);
+                const message = parsedData.message;
 
-            const buf = roomBuffers.get(roomId)!;
-            buf.push(msg);
-            if (buf.length >= MAX_BATCH_SIZE) flushRoom(roomId);
-        }
-
-        if (parsedData.type && parsedData.type.trim() === "erase") {
-            const roomId: number = Number(parsedData.roomId);
-            const message = parsedData.message; // contains shape to erase
-
-            // Parse the message to get the shapeId
-            const parsedMessage = JSON.parse(message);
-            const shapeId = parsedMessage.shapeId;
-
-            if (!SKIP_DB) {
-                try {
-                    const chatToDelete = await prismaClient.chat.findFirst({
-                        where: {
-                            roomId: roomId,
-                            message: {
-                                contains: `"id":"${shapeId}"`,
-                            },
-                        },
-                    });
-
-                    if (chatToDelete) {
-                        await prismaClient.chat.delete({
-                            where: {
-                                id: chatToDelete.id,
+                if (!SKIP_DB) {
+                    try {
+                        await prismaClient.chat.create({
+                            data: {
+                                roomId: roomId,
+                                message,
+                                userId,
                             },
                         });
+                    } catch (e) {
+                        console.error("ws: chat.create failed", e);
                     }
-                } catch (error) {
-                    console.error("Error deleting chat:", error);
                 }
+
+                const msg: OutgoingMessage = { type: "chat", message, roomId };
+                if (!roomBuffers.has(roomId)) {
+                    roomBuffers.set(roomId, []);
+                }
+
+                const buf = roomBuffers.get(roomId)!;
+                buf.push(msg);
+                if (buf.length >= MAX_BATCH_SIZE) flushRoom(roomId);
             }
 
-            //ab broadcast
-            const msg: OutgoingMessage = { type: "erase", message, roomId };
-            if (!roomBuffers.has(roomId)) {
-                roomBuffers.set(roomId, []);
-            }
+            if (parsedData.type && parsedData?.type === "erase") {
+                const roomId: number = Number(parsedData.roomId);
+                const message = parsedData.message; // contains shape to erase
 
-            const buf = roomBuffers.get(roomId)!;
-            buf.push(msg);
-            if (buf.length >= MAX_BATCH_SIZE) flushRoom(roomId);
+                // Parse the message to get the shapeId
+                const parsedMessage = JSON.parse(message);
+                const shapeId = parsedMessage.shapeId;
+
+                if (!SKIP_DB) {
+                    try {
+                        const chatToDelete = await prismaClient.chat.findFirst({
+                            where: {
+                                roomId: roomId,
+                                message: {
+                                    contains: `"id":"${shapeId}"`,
+                                },
+                            },
+                        });
+
+                        if (chatToDelete) {
+                            await prismaClient.chat.delete({
+                                where: {
+                                    id: chatToDelete.id,
+                                },
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Error deleting chat:", error);
+                    }
+                }
+
+                //ab broadcast
+                const msg: OutgoingMessage = { type: "erase", message, roomId };
+                if (!roomBuffers.has(roomId)) {
+                    roomBuffers.set(roomId, []);
+                }
+
+                const buf = roomBuffers.get(roomId)!;
+                buf.push(msg);
+                if (buf.length >= MAX_BATCH_SIZE) flushRoom(roomId);
+            }
+        } catch (err) {
+            console.error("MESSAGE HANDLER ERROR:", err);
         }
     });
 
