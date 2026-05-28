@@ -44,7 +44,12 @@ function flushRoom(roomId: number) {
             try {
                 sock.send(payload);
                 metricFramesSent += 1;
-            } catch {}
+            } catch (err) {
+                console.error("flushRoom: failed to send payload to a member", {
+                    roomId,
+                    err,
+                });
+            }
         });
     }
 
@@ -58,6 +63,32 @@ setInterval(() => {
         flushRoom(roomId);
     }
 }, FLUSH_MS);
+
+// Debug: surface runtime/environment details to help reproduce differences
+console.log("ws-backend starting", {
+    cwd: process.cwd(),
+    nodeEnv: process.env.NODE_ENV,
+    port: RENDER_PORT,
+    skipDbEnv: process.env.NO_DB,
+    databaseUrlSet: !!process.env.DATABASE_URL,
+});
+
+// Try connecting Prisma early so we can fail fast and log useful errors
+async function tryPrismaConnect() {
+    if (SKIP_DB) {
+        console.log("SKIP_DB enabled; skipping Prisma connect");
+        return;
+    }
+    try {
+        await prismaClient.$connect();
+        console.log("Prisma connected successfully");
+    } catch (e) {
+        console.error("Prisma failed to connect at startup", e);
+    }
+}
+
+// invoke but don't block startup
+tryPrismaConnect();
 
 //map instead of simple array to improve lookups,
 const users = new Map<WebSocket, User>();
@@ -121,6 +152,11 @@ wss.on("connection", function connection(ws, request) {
                 parsedData = JSON.parse(data); // {type: "join-room", roomId: 1}
             }
 
+            console.log("ws: received message", {
+                type: parsedData?.type,
+                url: request.url,
+            });
+
             if (parsedData.type === "join_room") {
                 const user = users.get(ws);
                 if (!user) return;
@@ -157,15 +193,19 @@ wss.on("connection", function connection(ws, request) {
             if (parsedData.type && parsedData?.type === "chat") {
                 const roomId: number = Number(parsedData.roomId);
                 const message = parsedData.message;
+                console.log("ws: chat message", { roomId, userId });
 
                 if (!SKIP_DB) {
                     try {
-                        await prismaClient.chat.create({
+                        const created = await prismaClient.chat.create({
                             data: {
                                 roomId: roomId,
                                 message,
                                 userId,
                             },
+                        });
+                        console.log("ws: chat.create success", {
+                            id: created.id,
                         });
                     } catch (e) {
                         console.error("ws: chat.create failed", e);
@@ -190,6 +230,8 @@ wss.on("connection", function connection(ws, request) {
                 const parsedMessage = JSON.parse(message);
                 const shapeId = parsedMessage.shapeId;
 
+                console.log("ws: erase message", { roomId, shapeId, userId });
+
                 if (!SKIP_DB) {
                     try {
                         const chatToDelete = await prismaClient.chat.findFirst({
@@ -201,11 +243,18 @@ wss.on("connection", function connection(ws, request) {
                             },
                         });
 
+                        console.log("ws: erase - found chatToDelete", {
+                            chatToDeleteId: chatToDelete?.id,
+                        });
+
                         if (chatToDelete) {
-                            await prismaClient.chat.delete({
+                            const deleted = await prismaClient.chat.delete({
                                 where: {
                                     id: chatToDelete.id,
                                 },
+                            });
+                            console.log("ws: erase - deleted chat", {
+                                deletedId: deleted.id,
                             });
                         }
                     } catch (error) {
@@ -246,7 +295,7 @@ wss.on("connection", function connection(ws, request) {
     });
 });
 
-const heartBeatInterval = 30;
+const heartBeatInterval = 30000;
 const heartBeatTimeout = 60;
 
 setInterval(() => {
@@ -264,3 +313,11 @@ setInterval(() => {
         } catch {}
     });
 }, heartBeatInterval);
+
+process.on("uncaughtException", (err) => {
+    console.error("uncaughtException:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+    console.error("unhandledRejection:", reason);
+});
