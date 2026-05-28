@@ -135,7 +135,9 @@ wss.on("connection", function connection(ws, request) {
                             roomId: rId,
                         }),
                     );
-                } catch {}
+                } catch (err) {
+                    console.log("error in join", err);
+                }
             }
 
             if (parsedData.type === "leave_room") {
